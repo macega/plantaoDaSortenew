@@ -1,0 +1,13 @@
+{
+  "name": "plantao-da-sorte",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Sistema de sorteio via WhatsApp para Vercel com Firebase e CodeChat",
+  "engines": {
+    "node": "18.x"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.4.0",
+    "firebase": "^10.12.0"
+  }
+}

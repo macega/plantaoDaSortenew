@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sorteio WhatsApp</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --card: #111827;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --accent: #22c55e;
+        --danger: #ef4444;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: linear-gradient(135deg, #0f172a, #111827);
+        color: var(--text);
+        min-height: 100vh;
+        padding: 24px;
+      }
+
+      .container {
+        max-width: 960px;
+        margin: 0 auto;
+      }
+
+      .panel {
+        background: rgba(17, 24, 39, 0.92);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 20px 45px rgba(0, 0, 0, 0.18);
+      }
+
+      h1 {
+        margin-top: 0;
+      }
+
+      .actions {
+        display: flex;
+        gap: 12px;
+        margin: 20px 0 30px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        appearance: none;
+        border: none;
+        border-radius: 10px;
+        padding: 12px 18px;
+        font-weight: 700;
+        cursor: pointer;
+        background: var(--accent);
+        color: #06250d;
+      }
+
+      button:hover {
+        filter: brightness(1.05);
+      }
+
+      .status {
+        color: var(--muted);
+        margin-bottom: 18px;
+        min-height: 24px;
+      }
+
+      .lista {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+      }
+
+      .participante {
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 12px;
+        padding: 12px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        object-fit: cover;
+        background: #1f2937;
+      }
+
+      .nome {
+        font-weight: 700;
+      }
+
+      .telefone {
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      .vazio {
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="panel">
+        <h1>Dashboard de Sorteio</h1>
+
+        <div class="actions">
+          <button id="sortearBtn" type="button">Realizar Sorteio</button>
+        </div>
+
+        <div id="status" class="status">Carregando participantes...</div>
+
+        <div id="listaParticipantes" class="lista"></div>
+      </div>
+    </div>
+
+    <script type="module">
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+      import { getFirestore, collection, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+      const firebaseConfig = {
+        apiKey: 'SUA_API_KEY',
+        authDomain: 'SEU_PROJETO.firebaseapp.com',
+        projectId: 'SEU_PROJETO',
+        storageBucket: 'SEU_PROJETO.appspot.com',
+        messagingSenderId: 'SEU_SENDER_ID',
+        appId: 'SEU_APP_ID'
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+      const listaEl = document.getElementById('listaParticipantes');
+      const statusEl = document.getElementById('status');
+      const sortearBtn = document.getElementById('sortearBtn');
+
+      function renderParticipantes(participantes) {
+        if (!participantes.length) {
+          listaEl.innerHTML = '<div class="vazio">Nenhum participante recebido ainda.</div>';
+          return;
+        }
+
+        listaEl.innerHTML = participantes.map((p) => `
+          <div class="participante">
+            <img class="avatar" src="${p.foto_url || 'https://via.placeholder.com/48'}" alt="${p.nome || 'Participante'}" />
+            <div>
+              <div class="nome">${p.nome || 'Participante'}</div>
+              <div class="telefone">${p.telefone || p.id || 'Sem telefone'}</div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      const q = query(collection(db, 'participantes'), orderBy('atualizado_em', 'desc'));
+      onSnapshot(q, (snapshot) => {
+        const participantes = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        statusEl.textContent = `${participantes.length} participante(s) registrado(s)`;
+        renderParticipantes(participantes);
+      }, (error) => {
+        console.error('Erro ao escutar Firestore:', error);
+        statusEl.textContent = 'Erro ao carregar participantes.';
+      });
+
+      sortearBtn.addEventListener('click', async () => {
+        sortearBtn.disabled = true;
+        statusEl.textContent = 'Sorteando...';
+
+        try {
+          const response = await fetch('/api/sortear', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || 'Erro ao sortear.');
+          }
+
+          statusEl.textContent = `Ganhador: ${data.ganhador.nome}`;
+        } catch (error) {
+          console.error(error);
+          statusEl.textContent = error.message;
+        } finally {
+          sortearBtn.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>
